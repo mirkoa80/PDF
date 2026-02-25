@@ -63,5 +63,38 @@ def get_all_pdfs(start_url, max_depth):
 # --- HAUPTFUNKTION ---
 if start_button:
     if not url_input.startswith("http"):
-        st.error("Bitte gib eine vollständige URL ein (
-                 
+        st.error("Bitte gib eine vollständige URL ein (mit https://).")
+    else:
+        with st.spinner("Sammle Dateien..."):
+            pdf_urls = get_all_pdfs(url_input, depth)
+            
+            if pdf_urls:
+                st.success(f"Gefunden: {len(pdf_urls)} PDF-Dateien.")
+                
+                zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED) as zip_file:
+                    for i, pdf_url in enumerate(pdf_urls):
+                        try:
+                            # Dateiname säubern
+                            file_name = pdf_url.split('/')[-1].split('?')[0]
+                            if not file_name.lower().endswith('.pdf'):
+                                file_name = f"dokument_{i}.pdf"
+                            
+                            # Auch beim eigentlichen Download SSL-Fehler ignorieren
+                            pdf_res = requests.get(pdf_url, timeout=15, verify=False)
+                            zip_file.writestr(file_name, pdf_res.content)
+                        except:
+                            st.warning(f"Übersprungen: {pdf_url}")
+                
+                st.download_button(
+                    label="📥 ZIP-Archiv mit allen PDFs herunterladen",
+                    data=zip_buffer.getvalue(),
+                    file_name="spanisch_sammlung.zip",
+                    mime="application/zip",
+                    use_container_width=True
+                )
+            else:
+                st.info("Keine PDFs gefunden.")
+
+st.divider()
+st.caption("Tipp: Lade die entpackten PDFs direkt in NotebookLM hoch, um dein Spanisch-Training zu starten.")
